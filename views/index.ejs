@@ -1,0 +1,202 @@
+<html ng-app="app">
+<head>
+  <title>ngTodo</title>
+  <link rel="stylesheet"  href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+</head>
+<body>
+
+<ng-view></ng-view>
+
+<!-- Libraries -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-route.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-resource.min.js"></script>
+<script src="uiRouter.js"></script>
+
+<!-- Template -->
+<script type="text/ng-template" id="/todos.html">
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#">
+        <img alt="Brand" src="images/m.ico">
+      </a>
+      <a href="#"><h4>Memo Printing App</h4></a>
+    </div>
+    <div>
+    <div>
+    <ul class="nav navbar-nav" style="color:white">
+    <li>
+
+      </li>
+      </ul>
+  </div>
+</nav>
+<form class="form-horizontal">
+  <div class="container">
+  <ul class="nav nav-tabs">
+  <li role="presentation" class="active"><a href="#">Add Customer</a></li>
+  <li role="presentation"><a href="#/tab/update">Update Customer</a></li>
+  <li role="presentation"><a href="#">Delete Customer</a></li>
+  <li role="presentation"><a href="#">ViewMemo</a></li>
+</ul>
+    <div class="row">
+    <div class="col-md-5">
+  Search: <input type="text" class="form-control" ng-model="search.name"><br>
+   <ul class="list-group">
+    <li class="list-group-item" ng-repeat="todo in todos | filter: search">
+      <input type="checkbox" ng-model="todo.completed" ng-change="update($index)">
+      <a ng-show="!editing[$index]" href="#/"></a>
+       <a href="#/{{todo._id}}">{{todo.name}}</a>
+      <div class="btn-block">
+      <button ng-show="!editing[$index]" ng-click="edit($index)" class="btn btn-primary">edit</button>
+      <button ng-show="!editing[$index]" ng-click="remove($index)" class="btn btn-primary">remove</button>
+      </button>
+      <div class="btn-block">
+      <input  type="text" class="form-control" ng-show="editing[$index]" ng-model="todo.name">
+      </div>
+      <div class="btn-block">
+      <button ng-show="editing[$index]" ng-click="update($index)" class="btn btn-primary">Update</button>
+      <button ng-show="editing[$index]" ng-click="cancel($index)" class="btn btn-primary">Cancel</button>
+      </button>
+    </li>
+  </ul>
+  New task <input type="text" class="form-control" ng-model="newTodo"><br>
+  <button class="btn btn-primary" ng-click="save()">Create</button>
+  </div>
+  </div>
+  </div>
+  </form>
+</script>
+
+<script type="text/ng-template" id="/todoDetails.html">
+  <form class="form-horizontal">
+  <div class="container">
+  <div class="row">
+    <div class="col-md-5">
+    <h1>{{ todo.name }}</h1>
+    <b>Completed:</b> <input type="checkbox" ng-model="todo.completed"><br>
+    <b>Note:</b> <textarea class="form-control" ng-model="todo.note">{{ todo.note }}</textarea><br><br>
+
+    <button ng-click="update()" class="btn btn-sm btn-primary">update</button>
+    <button ng-click="remove()" class="btn btn-sm btn-primary">remove</button>
+    <a href="/">Cancel</a>
+    </div>
+  </div>
+  </div>
+  </form>
+</script>
+<script type="text/ng-template" id="/updateCustomer.html">
+<div>
+HI
+</div>
+</script>
+<script>
+  angular.module('app', ['ngRoute','ngResource'])
+
+    //---------------
+    // Services
+    //---------------
+    .factory('Todos',['$resource',function($resource){
+        return $resource('/todos/:id',null,{
+            'update':{method:'PUT'}
+        });
+    }])
+
+
+    //---------------
+    // Controllers
+    //---------------
+
+    .controller('TodoController', ['$scope', 'Todos', function ($scope, Todos) {
+    /* Todos.success(function(data){
+            $scope.todos = data;
+          }).error(function(data, status){
+            console.log(data, status);
+            $scope.todos = [];
+          });*/
+          $scope.editing = [];
+          $scope.todos = Todos.query();
+
+            $scope.save = function(){
+            if(!$scope.newTodo || $scope.newTodo.length < 1) return;
+            var todo = new Todos({ name: $scope.newTodo, completed: false });
+
+            todo.$save(function(){
+              $scope.todos.push(todo);
+              $scope.newTodo = ''; // clear textbox
+            });
+          }
+
+          $scope.update = function(index){
+            var todo = $scope.todos[index];
+            Todos.update({id: todo._id}, todo);
+            $scope.editing[index] = false;
+          }
+
+          $scope.edit = function(index){
+            $scope.editing[index] = angular.copy($scope.todos[index]);
+          }
+
+          $scope.cancel = function(index){
+            $scope.todos[index] = angular.copy($scope.editing[index]);
+            $scope.editing[index] = false;
+          }
+
+           $scope.remove = function(index){
+            var todo = $scope.todos[index];
+            Todos.remove({id: todo._id}, function(){
+              $scope.todos.splice(index, 1);
+            });
+          }
+         }])
+
+
+
+     .controller('TodoDetailCtrl', ['$scope', '$routeParams', 'Todos', '$location', function ($scope, $routeParams, Todos, $location) {
+      /*$scope.todo = Todos[$routeParams.id];*/
+       $scope.todo = Todos.get({id: $routeParams.id });
+
+        $scope.update = function(){
+            Todos.update({id: $scope.todo._id}, $scope.todo, function(){
+              $location.url('/');
+            });
+          }
+
+
+          $scope.remove = function(){
+            Todos.remove({id: $scope.todo._id}, function(){
+              $location.url('/');
+            });
+          }
+    }])
+
+    .controller('updateCtrl',['$scope','$routeParams', 'Todos', '$location', function ($scope, $routeParams, Todos, $location){
+
+    }])
+    //---------------
+    // Routes
+    //---------------
+
+    .config(['$routeProvider', function ($routeProvider) {
+      $routeProvider
+        .when('/', {
+          templateUrl: '/todos.html',
+          controller: 'TodoController'
+        })
+
+        .when('/:id', {
+          templateUrl: '/todoDetails.html',
+          controller: 'TodoDetailCtrl'
+       })
+        .when('/tab/update',{
+          templateUrl:'/updateCustomer.html',
+          controller:'updateCtrl'
+        });
+    }]);
+</script>
+
+</body>
+</html>
